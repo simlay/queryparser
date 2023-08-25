@@ -1,0 +1,13 @@
+database_name,schema_name,table_name,column_name
+prod,integrations,orders,id
+prod,integrations,orders,item_name
+prod,integrations,orders,customer_name
+prod,integrations,orders,price
+prod,integrations,order_items,id
+prod,integrations,order_items,order_id
+prod,integrations,order_items,date
+prod,integrations,order_items,count
+prod,platform,order_items,order_id
+prod,platform,order_items,date
+prod,platform,order_items,item_name
+prod,platform,order_items,count
