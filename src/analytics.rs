@@ -16,23 +16,6 @@ pub struct QueryAnalytics {
     pub dependency_map: HashMap<String, (Vec<String>, bool)>,
 }
 
-impl From<Vec<FullColumn>> for QueryAnalytics {
-    fn from(metadata: Vec<FullColumn>) -> Self {
-        Self {
-            metadata,
-            dependency_map: HashMap::new(),
-        }
-    }
-}
-impl From<HashMap<String, (Vec<String>, bool)>> for QueryAnalytics {
-    fn from(dependency_map: HashMap<String, (Vec<String>, bool)>) -> Self {
-        Self {
-            dependency_map,
-            metadata: Vec::new(),
-        }
-    }
-}
-
 impl QueryAnalytics {
     fn add_dependency(
         &mut self,
@@ -216,15 +199,19 @@ impl QueryAnalytics {
                                             .contains(&function_name);
 
                                     for arg in &function.args {
-                                        if let FunctionArg::Unnamed(FunctionArgExpr::Expr(expr)) = arg {
-                                            let cols = get_column_names_from_expr(expr);
+                                        if let FunctionArg::Unnamed(FunctionArgExpr::Expr(expr)) =
+                                            arg
+                                        {
+                                            let cols = Self::get_column_names_from_expr(expr);
                                             for col in &cols {
                                                 // This col could be compound and have a table
-                                                // name in it.
+                                                // name in it. This is a bad way to do it and
+                                                // should be fixed.
+
                                                 let col = col.split('.').collect::<Vec<&str>>();
-                                                let column_name = col
-                                                    .last()
-                                                    .expect("Failed to get any columns");
+                                                let column_name =
+                                                    col.last().expect("Failed to get any columns");
+
                                                 if col.len() > 1 {
                                                     out_col_table = Some(col.first().expect("Failed to get table from column string").to_string());
                                                 }
@@ -238,7 +225,6 @@ impl QueryAnalytics {
                                                 );
                                             }
                                         }
-
                                     }
                                 }
                                 Expr::Identifier(id) => {
@@ -294,27 +280,42 @@ impl QueryAnalytics {
 
         Ok(())
     }
-}
+    fn get_column_names_from_expr(expr: &Expr) -> Vec<String> {
+        let mut out = Vec::new();
+        match expr {
+            Expr::BinaryOp { left, right, .. } => {
+                let left = Self::get_column_names_from_expr(left);
+                let right = Self::get_column_names_from_expr(right);
+                out.extend(left);
+                out.extend(right);
+            }
+            Expr::Identifier(id) => {
+                out.push(id.value.clone());
+            }
+            Expr::CompoundIdentifier(ids) => {
+                let ids = ids.iter().map(|v| v.value.clone()).collect::<Vec<String>>();
+                let id = ids.join(".");
 
-fn get_column_names_from_expr(expr: &Expr) -> Vec<String> {
-    let mut out = Vec::new();
-    match expr {
-        Expr::BinaryOp { left, right, .. } => {
-            let left = get_column_names_from_expr(left);
-            let right = get_column_names_from_expr(right);
-            out.extend(left);
-            out.extend(right);
+                out.push(id);
+            }
+            _ => unimplemented!(),
         }
-        Expr::Identifier(id) => {
-            out.push(id.value.clone());
-        }
-        Expr::CompoundIdentifier(ids) => {
-            let ids = ids.iter().map(|v| v.value.clone()).collect::<Vec<String>>();
-            let id = ids.join(".");
-
-            out.push(id);
-        }
-        _ => unimplemented!(),
+        out
     }
-    out
+}
+impl From<Vec<FullColumn>> for QueryAnalytics {
+    fn from(metadata: Vec<FullColumn>) -> Self {
+        Self {
+            metadata,
+            dependency_map: HashMap::new(),
+        }
+    }
+}
+impl From<HashMap<String, (Vec<String>, bool)>> for QueryAnalytics {
+    fn from(dependency_map: HashMap<String, (Vec<String>, bool)>) -> Self {
+        Self {
+            dependency_map,
+            metadata: Vec::new(),
+        }
+    }
 }
