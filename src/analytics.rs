@@ -195,7 +195,7 @@ impl QueryAnalytics {
                                         .map(|v| v.value.clone().to_lowercase());
 
                                     let opaque =
-                                        vec![Some("count".to_string()), Some("sum".to_string())]
+                                        [Some("count".to_string()), Some("sum".to_string())]
                                             .contains(&function_name);
 
                                     for arg in &function.args {
