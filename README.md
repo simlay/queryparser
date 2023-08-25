@@ -1,3 +1,4 @@
+[![codecov](https://codecov.io/gh/simlay/queryparser/graph/badge.svg?token=3ZHNK9NGXR)](https://codecov.io/gh/simlay/queryparser)
 # A Query Parser Exercise
 
 The prompt for this exercise is in rust_code_challenge.pdf.
