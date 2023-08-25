@@ -23,7 +23,7 @@ group by order_items.order_id;"#;
         ),
         (
             "id".to_string(),
-            (vec!["prod.integrations.orders.id".to_string()], false)
+            (vec!["prod.integrations.orders.id".to_string()], false),
         ),
     ]);
     assert_eq!(analytics.dependency_map, expected);
@@ -81,7 +81,7 @@ select count(id) as foobar from orders;"#;
         .expect("Failed to get lineage");
     let expected = HashMap::from([(
         "foobar".to_string(),
-        (vec!["prod.integrations.orders.id".to_string()], true)
+        (vec!["prod.integrations.orders.id".to_string()], true),
     )]);
     assert_eq!(analytics.dependency_map, expected);
 }
@@ -103,10 +103,13 @@ select order_id from platform.order_items;"#;
         .expect("Failed to get lineage");
     let expected = HashMap::from([(
         "order_id".to_string(),
-        (vec![
-            "prod.integrations.order_items.order_id".to_string(),
-            "prod.platform.order_items.order_id".to_string(),
-        ], false)
+        (
+            vec![
+                "prod.integrations.order_items.order_id".to_string(),
+                "prod.platform.order_items.order_id".to_string(),
+            ],
+            false,
+        ),
     )]);
     assert_eq!(analytics.dependency_map, expected);
 }
@@ -127,10 +130,13 @@ where order_items.order_id = orders.id;"#;
         .expect("Failed to get lineage");
     let expected = HashMap::from([(
         "total_price".to_string(),
-        (vec![
-            "prod.platform.order_items.count".to_string(),
-            "prod.integrations.orders.price".to_string(),
-        ], true)
+        (
+            vec![
+                "prod.platform.order_items.count".to_string(),
+                "prod.integrations.orders.price".to_string(),
+            ],
+            true,
+        ),
     )]);
     assert_eq!(analytics.dependency_map, expected);
 }
@@ -156,13 +162,14 @@ where order_items.my_order_id = orders.id;"#;
     let expected = HashMap::from([(
         "total_price".to_string(),
         (
-        vec![
-            "prod.integrations.order_items.count".to_string(),
-            // TODO: Fix this.
-            //"prod.platform.order_items.count".to_string(),
-            //"prod.integrations.orders.price".to_string(),
-        ],
-        true),
+            vec![
+                "prod.integrations.order_items.count".to_string(),
+                // TODO: Fix this.
+                //"prod.platform.order_items.count".to_string(),
+                //"prod.integrations.orders.price".to_string(),
+            ],
+            true,
+        ),
     )]);
     assert_eq!(analytics.dependency_map, expected);
 }

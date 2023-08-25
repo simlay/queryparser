@@ -1,15 +1,10 @@
 use clap::Parser;
 use std::path::PathBuf;
 
+mod analytics;
 #[cfg(test)]
 mod test;
-mod analytics;
-pub use analytics::{
-    FullColumn,
-    QueryAnalytics,
-
-
-};
+pub use analytics::{FullColumn, QueryAnalytics};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

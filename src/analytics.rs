@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use sqlparser::ast::{
-    Expr, FunctionArg, FunctionArgExpr, SelectItem, SetExpr, Statement, TableFactor,
-    TableWithJoins,
+    Expr, FunctionArg, FunctionArgExpr, SelectItem, SetExpr, Statement, TableFactor, TableWithJoins,
 };
 use std::collections::HashMap;
 #[derive(Debug, Deserialize, PartialEq)]
@@ -35,7 +34,12 @@ impl From<HashMap<String, (Vec<String>, bool)>> for QueryAnalytics {
 }
 
 impl QueryAnalytics {
-    fn add_dependency(&mut self, dependent_column: String, upstream_identifier: String, new_opacity: bool) {
+    fn add_dependency(
+        &mut self,
+        dependent_column: String,
+        upstream_identifier: String,
+        new_opacity: bool,
+    ) {
         if let Some((dependent_column, opacity)) = self.dependency_map.get_mut(&dependent_column) {
             // TODO: make this a hashset.
             if !dependent_column.contains(&upstream_identifier) {
@@ -43,8 +47,10 @@ impl QueryAnalytics {
                 *opacity = new_opacity;
             }
         } else {
-            self.dependency_map
-                .insert(dependent_column.clone(), (vec![upstream_identifier], new_opacity));
+            self.dependency_map.insert(
+                dependent_column.clone(),
+                (vec![upstream_identifier], new_opacity),
+            );
         }
     }
 
@@ -57,15 +63,10 @@ impl QueryAnalytics {
         let mut needle: Option<String> = None;
         if let Some(table_name) = table_name {
             for meta in &self.metadata {
-                if column_name == meta.column_name
-                    && table_name == meta.table_name
-                {
+                if column_name == meta.column_name && table_name == meta.table_name {
                     needle = Some(format!(
-                            "{}.{}.{}.{}",
-                            meta.database_name,
-                            meta.schema_name,
-                            meta.table_name,
-                            meta.column_name
+                        "{}.{}.{}.{}",
+                        meta.database_name, meta.schema_name, meta.table_name, meta.column_name
                     ));
                     return needle;
                 }
@@ -73,10 +74,7 @@ impl QueryAnalytics {
         } else {
             for TableWithJoins { relation, .. } in &from {
                 match relation {
-                    TableFactor::Table {
-                        name,
-                        ..
-                    } => {
+                    TableFactor::Table { name, .. } => {
                         let full_name = name.0.clone();
                         let potential_table_name: Option<String> =
                             full_name.last().map(|v| v.value.clone());
@@ -85,35 +83,39 @@ impl QueryAnalytics {
                         } else {
                             None
                         };
-                        let potential_table_name =
-                            potential_table_name.expect("Could not retrieve table name out of struct");
+                        let potential_table_name = potential_table_name
+                            .expect("Could not retrieve table name out of struct");
                         for meta in &self.metadata {
                             if column_name == meta.column_name
-                                && ((table_name.is_none() && meta.table_name == potential_table_name)
+                                && ((table_name.is_none()
+                                    && meta.table_name == potential_table_name)
                                     || (table_name.is_some()
                                         && Some(meta.table_name.clone()) == table_name))
-                                    && ((schema_name.is_some()
-                                            && Some(meta.schema_name.clone()) == schema_name)
-                                        || schema_name.is_none())
+                                && ((schema_name.is_some()
+                                    && Some(meta.schema_name.clone()) == schema_name)
+                                    || schema_name.is_none())
                             {
                                 needle = Some(format!(
-                                        "{}.{}.{}.{}",
-                                        meta.database_name,
-                                        meta.schema_name,
-                                        meta.table_name,
-                                        meta.column_name
+                                    "{}.{}.{}.{}",
+                                    meta.database_name,
+                                    meta.schema_name,
+                                    meta.table_name,
+                                    meta.column_name
                                 ));
                                 return needle;
                             }
                         }
                     }
-                    TableFactor::Derived { subquery, ..} => {
+                    TableFactor::Derived { subquery, .. } => {
                         let expr = *subquery.body.clone();
-                        let needle = self.search_for_columns_in_expr(expr, column_name.clone(), table_name.clone());
+                        let needle = self.search_for_columns_in_expr(
+                            expr,
+                            column_name.clone(),
+                            table_name.clone(),
+                        );
                         if needle.is_some() {
                             return needle;
                         }
-
                     }
                     val => {
                         println!("Skipping this relation: {val:?}");
@@ -135,8 +137,12 @@ impl QueryAnalytics {
                 return self.search_for_columns_in_tables(select.from, column_name, table_name);
             }
             SetExpr::Query(_) => todo!(),
-            SetExpr::SetOperation { left, right, ..} => {
-                let out = self.search_for_columns_in_expr(*left.clone(), column_name.clone(), table_name.clone());
+            SetExpr::SetOperation { left, right, .. } => {
+                let out = self.search_for_columns_in_expr(
+                    *left.clone(),
+                    column_name.clone(),
+                    table_name.clone(),
+                );
                 if out.is_some() {
                     return out;
                 }
@@ -151,7 +157,6 @@ impl QueryAnalytics {
             SetExpr::Table(_) => todo!(),
         }
         None
-
     }
     pub fn search_for_col_and_add(
         &mut self,
@@ -206,20 +211,19 @@ impl QueryAnalytics {
                                         .first()
                                         .map(|v| v.value.clone().to_lowercase());
 
-                                    let opaque = vec![Some("count".to_string()), Some("sum".to_string())].contains(&function_name);
+                                    let opaque =
+                                        vec![Some("count".to_string()), Some("sum".to_string())]
+                                            .contains(&function_name);
 
                                     for arg in &function.args {
                                         match arg {
                                             //FunctionArg::Named { name, arg } => {}
-                                            FunctionArg::Unnamed(FunctionArgExpr::Expr(
-                                                    expr,
-                                            )) => {
+                                            FunctionArg::Unnamed(FunctionArgExpr::Expr(expr)) => {
                                                 let cols = get_column_names_from_expr(expr);
                                                 for col in &cols {
                                                     // This col could be compound and have a table
                                                     // name in it.
-                                                    let col =
-                                                        col.split('.').collect::<Vec<&str>>();
+                                                    let col = col.split('.').collect::<Vec<&str>>();
                                                     let column_name = col
                                                         .last()
                                                         .expect("Failed to get any columns");
@@ -267,11 +271,7 @@ impl QueryAnalytics {
                 }
             }
             // This is for unions
-            SetExpr::SetOperation {
-                left,
-                right,
-                ..
-            } => {
+            SetExpr::SetOperation { left, right, .. } => {
                 self.traverse_set_expr(*left);
                 self.traverse_set_expr(*right);
             }
@@ -305,7 +305,7 @@ impl QueryAnalytics {
 fn get_column_names_from_expr(expr: &Expr) -> Vec<String> {
     let mut out = Vec::new();
     match expr {
-        Expr::BinaryOp { left, right, ..} => {
+        Expr::BinaryOp { left, right, .. } => {
             let left = get_column_names_from_expr(left);
             let right = get_column_names_from_expr(right);
             out.extend(left);
