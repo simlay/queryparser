@@ -216,35 +216,29 @@ impl QueryAnalytics {
                                             .contains(&function_name);
 
                                     for arg in &function.args {
-                                        match arg {
-                                            //FunctionArg::Named { name, arg } => {}
-                                            FunctionArg::Unnamed(FunctionArgExpr::Expr(expr)) => {
-                                                let cols = get_column_names_from_expr(expr);
-                                                for col in &cols {
-                                                    // This col could be compound and have a table
-                                                    // name in it.
-                                                    let col = col.split('.').collect::<Vec<&str>>();
-                                                    let column_name = col
-                                                        .last()
-                                                        .expect("Failed to get any columns");
-                                                    if col.len() > 1 {
-                                                        out_col_table = Some(col.first().expect("Failed to get table from column string").to_string());
-                                                    }
-
-                                                    self.search_for_col_and_add(
-                                                        select.from.clone(),
-                                                        column_name.to_string(),
-                                                        dependency_alias.clone(),
-                                                        out_col_table.clone(),
-                                                        opaque,
-                                                    );
+                                        if let FunctionArg::Unnamed(FunctionArgExpr::Expr(expr)) = arg {
+                                            let cols = get_column_names_from_expr(expr);
+                                            for col in &cols {
+                                                // This col could be compound and have a table
+                                                // name in it.
+                                                let col = col.split('.').collect::<Vec<&str>>();
+                                                let column_name = col
+                                                    .last()
+                                                    .expect("Failed to get any columns");
+                                                if col.len() > 1 {
+                                                    out_col_table = Some(col.first().expect("Failed to get table from column string").to_string());
                                                 }
-                                            }
 
-                                            // The Unnamed fuction types are wildcards and that is
-                                            // not supported.
-                                            _ => {}
+                                                self.search_for_col_and_add(
+                                                    select.from.clone(),
+                                                    column_name.to_string(),
+                                                    dependency_alias.clone(),
+                                                    out_col_table.clone(),
+                                                    opaque,
+                                                );
+                                            }
                                         }
+
                                     }
                                 }
                                 Expr::Identifier(id) => {
