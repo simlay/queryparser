@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 csv = "1.2.2"
-sqlparser = "0.40.0"
+sqlparser = "0.41.0"
 serde = { version = "1.0", features = ["derive"] }
 clap = { version = "4.4.0", features = ["derive"] }
